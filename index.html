@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фінанси студента | Веб-застосунок</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        
+        window.firebaseConfig = {
+            apiKey: "ВАШ_API_KEY",
+            authDomain: "ВАШ_AUTH_DOMAIN",
+            projectId: "ВАШ_PROJECT_ID",
+            storageBucket: "ВАШ_STORAGE_BUCKET",
+            messagingSenderId: "ВАШ_SENDER_ID",
+            appId: "ВАШ_APP_ID"
+        };
+        
+        const app = initializeApp(window.firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+        window.provider = new GoogleAuthProvider();
+        window.signIn = () => signInWithPopup(window.auth, window.provider);
+        window.logout = () => signOut(window.auth);
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.query = query;
+        window.where = where;
+        window.getDocs = getDocs;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        window.updateDoc = updateDoc;
+        window.orderBy = orderBy;
+    </script>
+    <script type="module" src="script.js"></script>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    
+    <div class="container">
+        <div id="auth-screen" class="auth-screen active">
+            <div class="auth-card">
+                <h1>💰 Фінанси студента</h1>
+                <p>Керуй своїми доходами та витратами легко</p>
+                <button class="btn-google" onclick="window.signIn()">
+                    🚀 Увійти через Google
+                </button>
+            </div>
+        </div>
+
+        <div id="app-screen" class="app-screen">
+            <div class="header">
+                <div class="user-info">
+                    <img id="user-avatar" src="" alt="Avatar">
+                    <span id="user-name"></span>
+                </div>
+                <button class="btn-logout" onclick="window.logout()">Вийти</button>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-label">Поточний баланс</div>
+                <div class="balance-amount" id="balance">0.00 ₴</div>
+                <div class="balance-stats">
+                    <div class="stat income">📈 Доходи: <span id="total-income">0</span> ₴</div>
+                    <div class="stat expense">📉 Витрати: <span id="total-expense">0</span> ₴</div>
+                </div>
+            </div>
+
+            <div class="add-transaction">
+                <h3>➕ Додати транзакцію</h3>
+                <div class="form-grid">
+                    <select id="trans-type">
+                        <option value="income">📈 Дохід</option>
+                        <option value="expense">📉 Витрата</option>
+                    </select>
+                    <input type="number" id="trans-amount" placeholder="Сума" step="0.01">
+                    <select id="trans-category">
+                        <option value="Їжа">🍔 Їжа</option>
+                        <option value="Транспорт">🚗 Транспорт</option>
+                        <option value="Навчання">📚 Навчання</option>
+                        <option value="Розваги">🎬 Розваги</option>
+                        <option value="Житло">🏠 Житло</option>
+                        <option value="Зв'язок">📱 Зв'язок</option>
+                        <option value="Інше">📌 Інше</option>
+                    </select>
+                    <input type="text" id="trans-desc" placeholder="Опис (необов'язково)">
+                    <button class="btn-primary" onclick="window.addTransaction()">💾 Зберегти</button>
+                </div>
+            </div>
+
+            <div class="filters">
+                <h3>🔍 Фільтрація</h3>
+                <select id="filter-category">
+                    <option value="all">Всі категорії</option>
+                    <option value="Їжа">🍔 Їжа</option>
+                    <option value="Транспорт">🚗 Транспорт</option>
+                    <option value="Навчання">📚 Навчання</option>
+                    <option value="Розваги">🎬 Розваги</option>
+                    <option value="Житло">🏠 Житло</option>
+                    <option value="Зв'язок">📱 Зв'язок</option>
+                    <option value="Інше">📌 Інше</option>
+                </select>
+            </div>
+
+            <div class="transactions-list" id="transactions-list">
+                <div class="empty-state">💡 Додайте першу транзакцію</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
