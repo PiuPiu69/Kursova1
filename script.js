@@ -1,8 +1,4 @@
-// ========== ГЛОБАЛЬНІ ЗМІННІ ==========
-let currentUser = null;
-let transactions = [];
-
-// ========== ІНІЦІАЛІЗАЦІЯ Firebase (ваші дані) ==========
+// ========== ВАША КОНФІГУРАЦІЯ FIREBASE ==========
 const firebaseConfig = {
     apiKey: "AIzaSyDu4HEpjWVfJOE4GMji2ux-KK_47-YRvfw",
     authDomain: "kursova1-4e839.firebaseapp.com",
@@ -12,18 +8,19 @@ const firebaseConfig = {
     appId: "1:580567528040:web:81c77c2a05bf9c183841dd"
 };
 
-// Ініціалізація Firebase
+// Ініціалізація Firebase (Compat-версія, без імпортів)
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const provider = new firebase.auth.GoogleAuthProvider();
 
+// ========== ЗМІННІ ==========
+let currentUser = null;
+let transactions = [];
+
 // ========== ФУНКЦІЯ ВХОДУ ==========
 window.signIn = () => {
     auth.signInWithPopup(provider)
-        .then((result) => {
-            console.log("Вхід успішний:", result.user.displayName);
-        })
         .catch((error) => {
             console.error("Помилка входу:", error);
             alert("Помилка входу: " + error.message);
@@ -32,11 +29,7 @@ window.signIn = () => {
 
 // ========== ФУНКЦІЯ ВИХОДУ ==========
 window.logout = () => {
-    auth.signOut().then(() => {
-        console.log("Вихід виконано");
-    }).catch((error) => {
-        console.error("Помилка виходу:", error);
-    });
+    auth.signOut();
 };
 
 // ========== ФУНКЦІЯ ДОДАВАННЯ ТРАНЗАКЦІЇ ==========
@@ -51,14 +44,12 @@ window.addTransaction = async () => {
     const category = document.getElementById('trans-category').value;
     const description = document.getElementById('trans-desc').value;
     
-    // Перевірка коректності суми
     if (!amount || isNaN(amount) || amount <= 0) {
         alert("Введіть коректну суму (більше 0)");
         return;
     }
     
     try {
-        // Додаємо транзакцію в базу даних
         await db.collection('transactions').add({
             userId: currentUser.uid,
             type: type,
@@ -68,17 +59,13 @@ window.addTransaction = async () => {
             date: firebase.firestore.Timestamp.now()
         });
         
-        // Очищаємо форму
         document.getElementById('trans-amount').value = '';
         document.getElementById('trans-desc').value = '';
-        
-        // Оновлюємо список транзакцій та баланс
         await loadTransactions();
         
-        console.log("Транзакцію додано успішно!");
     } catch (error) {
-        console.error("Помилка додавання транзакції:", error);
-        alert("Помилка збереження: " + error.message);
+        console.error("Помилка збереження:", error);
+        alert("Помилка: " + error.message);
     }
 };
 
@@ -94,24 +81,24 @@ async function loadTransactions() {
         
         transactions = [];
         snapshot.forEach(doc => {
+            const data = doc.data();
             transactions.push({
                 id: doc.id,
-                ...doc.data(),
-                date: doc.data().date?.toDate() || new Date()
+                ...data,
+                date: data.date?.toDate() || new Date()
             });
         });
         
-        // Застосовуємо фільтр та оновлюємо відображення
         applyFilter();
         updateBalance();
         
-        console.log(`Завантажено ${transactions.length} транзакцій`);
+        console.log("Завантажено транзакцій:", transactions.length);
     } catch (error) {
-        console.error("Помилка завантаження транзакцій:", error);
+        console.error("Помилка завантаження:", error);
     }
 }
 
-// ========== ФІЛЬТРАЦІЯ ТРАНЗАКЦІЙ ==========
+// ========== ФІЛЬТРАЦІЯ ==========
 function applyFilter() {
     const filterCategory = document.getElementById('filter-category').value;
     let filtered = transactions;
@@ -124,22 +111,22 @@ function applyFilter() {
 }
 
 // ========== ВІДОБРАЖЕННЯ ТРАНЗАКЦІЙ ==========
-function renderTransactions(transactionsList) {
+function renderTransactions(list) {
     const container = document.getElementById('transactions-list');
     
-    if (!transactionsList || transactionsList.length === 0) {
-        container.innerHTML = '<div class="empty-state">📭 Немає транзакцій. Додайте першу!</div>';
+    if (!list || list.length === 0) {
+        container.innerHTML = '<div class="empty-state">📭 Немає транзакцій</div>';
         return;
     }
     
-    container.innerHTML = transactionsList.map(t => {
-        const dateStr = t.date ? t.date.toLocaleDateString('uk-UA') : new Date().toLocaleDateString('uk-UA');
+    container.innerHTML = list.map(t => {
+        const dateStr = t.date ? t.date.toLocaleDateString('uk-UA') : '';
         return `
             <div class="transaction-item transaction-${t.type}">
                 <div>
                     <strong>${t.category}</strong>
                     <div class="transaction-category">${t.description || 'Без опису'}</div>
-                    <div class="transaction-date">${dateStr}</div>
+                    <div style="font-size: 12px; color: #999;">${dateStr}</div>
                 </div>
                 <div class="transaction-amount ${t.type === 'income' ? 'income-text' : 'expense-text'}">
                     ${t.type === 'income' ? '+' : '-'} ${t.amount.toFixed(2)} ₴
@@ -165,68 +152,53 @@ function updateBalance() {
     
     const balance = totalIncome - totalExpense;
     
-    // Оновлюємо HTML елементи
     document.getElementById('balance').innerHTML = `${balance.toFixed(2)} ₴`;
     document.getElementById('total-income').innerHTML = totalIncome.toFixed(2);
     document.getElementById('total-expense').innerHTML = totalExpense.toFixed(2);
     
-    // Змінюємо колір балансу (зелений/червоний)
-    const balanceElement = document.getElementById('balance');
+    const balanceEl = document.getElementById('balance');
     if (balance >= 0) {
-        balanceElement.style.color = '#10b981';
+        balanceEl.style.color = '#10b981';
     } else {
-        balanceElement.style.color = '#ef4444';
+        balanceEl.style.color = '#ef4444';
     }
-    
-    console.log(`Баланс оновлено: доходи=${totalIncome}, витрати=${totalExpense}, баланс=${balance}`);
 }
 
 // ========== ВИДАЛЕННЯ ТРАНЗАКЦІЇ ==========
 window.deleteTransaction = async (id) => {
-    if (!confirm('Видалити цю транзакцію?')) return;
+    if (!confirm('Видалити транзакцію?')) return;
     
     try {
         await db.collection('transactions').doc(id).delete();
-        console.log("Транзакцію видалено");
-        await loadTransactions(); // Перезавантажуємо список
+        await loadTransactions();
     } catch (error) {
         console.error("Помилка видалення:", error);
         alert("Помилка видалення: " + error.message);
     }
 };
 
-// ========== СТЕЖЕННЯ ЗА СТАТУСОМ АВТЕНТИФІКАЦІЇ ==========
+// ========== СТЕЖЕННЯ ЗА ВХОДОМ/ВИХОДОМ ==========
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
-        console.log("Користувач увійшов:", user.displayName, user.email);
-        
-        // Відображаємо інформацію про користувача
         document.getElementById('user-name').innerText = user.displayName;
         document.getElementById('user-avatar').src = user.photoURL || 'https://via.placeholder.com/50';
-        
-        // Показуємо основний екран, ховаємо екран входу
         document.getElementById('auth-screen').classList.remove('active');
         document.getElementById('app-screen').classList.add('active');
-        
-        // Завантажуємо транзакції
         loadTransactions();
+        console.log("Користувач увійшов:", user.email);
     } else {
         currentUser = null;
-        console.log("Користувач вийшов");
-        
-        // Показуємо екран входу, ховаємо основний екран
         document.getElementById('auth-screen').classList.add('active');
         document.getElementById('app-screen').classList.remove('active');
-        
-        // Очищаємо список транзакцій
         transactions = [];
         renderTransactions([]);
         updateBalance();
+        console.log("Користувач вийшов");
     }
 });
 
-// ========== НАЛАШТУВАННЯ ФІЛЬТРА ==========
+// ========== ФІЛЬТР ==========
 document.getElementById('filter-category').addEventListener('change', () => {
     applyFilter();
 });
