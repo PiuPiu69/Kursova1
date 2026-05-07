@@ -6,19 +6,17 @@
     <title>Фінанси студента</title>
     <link rel="stylesheet" href="style.css">
     
-    <!-- Firebase SDK -->
     <script type="module">
-        // ⚠️ ЗАМІНІТЬ ЦІ ДАНІ НА ВАШІ З FIREBASE CONSOLE!
+       
         const firebaseConfig = {
-            apiKey: "AIzaSyB_pGXHc7WmF9SxkxsQpZknA3aLjL1wCxA",
-            authDomain: "finansy-cffb3.firebaseapp.com",
-            projectId: "finansy-cffb3",
-            storageBucket: "finansy-cffb3.firebasestorage.app",
-            messagingSenderId: "985406982568",
-            appId: "1:985406982568:web:2b8d1b8e8e8e8e8e8e8e8e"
+             apiKey : "AIzaSyA4nhImieNi7fDV8axuBHiq0ksbcfGjZzo" , 
+        authDomain : "kursova1-d43e4.firebaseapp.com" , 
+        projectId : "kursova1-d43e4" , 
+        storageBucket : "kursova1-d43e4.firebasestorage.app" , 
+        messagingSenderId : "88516887260" , 
+        appId : "1:88516887260:web:045e402ba51e2ae48aaa19" 
         };
         
-        // Імпортуємо Firebase модулі
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
