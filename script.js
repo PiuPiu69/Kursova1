@@ -203,4 +203,4 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-console.log("✅ Скрипт завантажено!");
+console.log("✅ Скрипт завантажено!!!");
