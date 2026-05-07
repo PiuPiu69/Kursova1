@@ -6,131 +6,84 @@
     <title>Фінанси студента</title>
     <link rel="stylesheet" href="style.css">
     
-    <script type="module">
-       
-       const firebaseConfig = {
-  apiKey: "AIzaSyDu4HEpjWVfJOE4GMji2ux-KK_47-YRvfw",
-  authDomain: "kursova1-4e839.firebaseapp.com",
-  projectId: "kursova1-4e839",
-  storageBucket: "kursova1-4e839.firebasestorage.app",
-  messagingSenderId: "580567528040",
-  appId: "1:580567528040:web:81c77c2a05bf9c183841dd"
-};
-        
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        
-        // Ініціалізація
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
-        
-        // Глобальні функції
-        window.signIn = () => signInWithPopup(auth, provider);
-        window.logout = () => signOut(auth);
-        
-        // Функція додавання транзакції
-        window.addTransaction = async () => {
-            const user = auth.currentUser;
-            if (!user) return alert("Увійдіть спочатку");
-            
-            const type = document.getElementById('trans-type').value;
-            const amount = parseFloat(document.getElementById('trans-amount').value);
-            const category = document.getElementById('trans-category').value;
-            const description = document.getElementById('trans-desc').value;
-            
-            if (!amount || isNaN(amount)) return alert("Введіть суму");
-            
-            await addDoc(collection(db, 'transactions'), {
-                userId: user.uid,
-                type: type,
-                amount: amount,
-                category: category,
-                description: description,
-                date: new Date().toISOString()
-            });
-            
-            document.getElementById('trans-amount').value = '';
-            loadTransactions();
-        };
-        
-        // Завантаження транзакцій
-        async function loadTransactions() {
-            const user = auth.currentUser;
-            if (!user) return;
-            
-            const q = query(collection(db, 'transactions'), where('userId', '==', user.uid), orderBy('date', 'desc'));
-            const snapshot = await getDocs(q);
-            const transactions = [];
-            snapshot.forEach(doc => transactions.push({ id: doc.id, ...doc.data() }));
-            
-            renderTransactions(transactions);
-            updateBalance(transactions);
-        }
-        
-        function renderTransactions(list) {
-            const container = document.getElementById('transactions-list');
-            if (list.length === 0) {
-                container.innerHTML = '<div class="empty-state">📭 Немає транзакцій</div>';
-                return;
-            }
-            container.innerHTML = list.map(t => `
-                <div class="transaction-item transaction-${t.type}">
-                    <div><strong>${t.category}</strong><div class="transaction-category">${t.description || 'Без опису'}</div><div>${new Date(t.date).toLocaleDateString()}</div></div>
-                    <div class="transaction-amount ${t.type === 'income' ? 'income-text' : 'expense-text'}">${t.type === 'income' ? '+' : '-'} ${t.amount} ₴</div>
-                    <button class="delete-btn" onclick="deleteTransaction('${t.id}')">🗑️</button>
-                </div>
-            `).join('');
-        }
-        
-        function updateBalance(transactions) {
-            let income = 0, expense = 0;
-            transactions.forEach(t => t.type === 'income' ? income += t.amount : expense += t.amount);
-            document.getElementById('balance').innerText = `${(income - expense).toFixed(2)} ₴`;
-            document.getElementById('total-income').innerText = income.toFixed(2);
-            document.getElementById('total-expense').innerText = expense.toFixed(2);
-        }
-        
-        window.deleteTransaction = async (id) => {
-            await deleteDoc(doc(db, 'transactions', id));
-            loadTransactions();
-        };
-        
-        // Слідкуємо за входом/виходом
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                document.getElementById('user-name').innerText = user.displayName;
-                document.getElementById('user-avatar').src = user.photoURL;
-                document.getElementById('auth-screen').classList.remove('active');
-                document.getElementById('app-screen').classList.add('active');
-                loadTransactions();
-            } else {
-                document.getElementById('auth-screen').classList.add('active');
-                document.getElementById('app-screen').classList.remove('active');
-            }
-        });
-        
-        // Фільтр
-        document.getElementById('filter-category').addEventListener('change', () => loadTransactions());
-    </script>
-    <style>/* Вставте ваш style.css сюди */</style>
+    <!-- Firebase SDK (Compat версія для роботи з нашим script.js) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
+    
     <div class="container">
         <div id="auth-screen" class="auth-screen active">
-            <div class="auth-card"><h1>💰 Фінанси студента</h1><p>Керуй своїми доходами та витратами легко</p><button class="btn-google" onclick="window.signIn()">🚀 Увійти через Google</button></div>
+            <div class="auth-card">
+                <h1>💰 Фінанси студента</h1>
+                <p>Керуй своїми доходами та витратами легко</p>
+                <button class="btn-google" onclick="window.signIn()">🚀 Увійти через Google</button>
+            </div>
         </div>
+
         <div id="app-screen" class="app-screen">
-            <div class="header"><div class="user-info"><img id="user-avatar"><span id="user-name"></span></div><button class="btn-logout" onclick="window.logout()">Вийти</button></div>
-            <div class="balance-card"><div class="balance-label">Поточний баланс</div><div class="balance-amount" id="balance">0.00 ₴</div><div class="balance-stats"><div class="stat income">📈 Доходи: <span id="total-income">0</span> ₴</div><div class="stat expense">📉 Витрати: <span id="total-expense">0</span> ₴</div></div></div>
-            <div class="add-transaction"><h3>➕ Додати транзакцію</h3><div class="form-grid"><select id="trans-type"><option value="income">📈 Дохід</option><option value="expense">📉 Витрата</option></select><input type="number" id="trans-amount" placeholder="Сума"><select id="trans-category"><option>🍔 Їжа</option><option>🚗 Транспорт</option><option>📚 Навчання</option><option>🎬 Розваги</option><option>🏠 Житло</option><option>📱 Зв'язок</option><option>📌 Інше</option></select><input type="text" id="trans-desc" placeholder="Опис"><button class="btn-primary" onclick="window.addTransaction()">💾 Зберегти</button></div></div>
-            <div class="filters"><h3>🔍 Фільтрація</h3><select id="filter-category"><option value="all">Всі категорії</option><option>🍔 Їжа</option><option>🚗 Транспорт</option><option>📚 Навчання</option><option>🎬 Розваги</option><option>🏠 Житло</option><option>📱 Зв'язок</option><option>📌 Інше</option></select></div>
-            <div class="transactions-list" id="transactions-list"><div class="empty-state">💡 Додайте першу транзакцію</div></div>
+            <div class="header">
+                <div class="user-info">
+                    <img id="user-avatar" src="" alt="Avatar">
+                    <span id="user-name"></span>
+                </div>
+                <button class="btn-logout" onclick="window.logout()">Вийти</button>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-label">Поточний баланс</div>
+                <div class="balance-amount" id="balance">0.00 ₴</div>
+                <div class="balance-stats">
+                    <div class="stat income">📈 Доходи: <span id="total-income">0</span> ₴</div>
+                    <div class="stat expense">📉 Витрати: <span id="total-expense">0</span> ₴</div>
+                </div>
+            </div>
+
+            <div class="add-transaction">
+                <h3>➕ Додати транзакцію</h3>
+                <div class="form-grid">
+                    <select id="trans-type">
+                        <option value="income">📈 Дохід</option>
+                        <option value="expense">📉 Витрата</option>
+                    </select>
+                    <input type="number" id="trans-amount" placeholder="Сума" step="0.01">
+                    <select id="trans-category">
+                        <option value="Їжа">🍔 Їжа</option>
+                        <option value="Транспорт">🚗 Транспорт</option>
+                        <option value="Навчання">📚 Навчання</option>
+                        <option value="Розваги">🎬 Розваги</option>
+                        <option value="Житло">🏠 Житло</option>
+                        <option value="Зв'язок">📱 Зв'язок</option>
+                        <option value="Інше">📌 Інше</option>
+                    </select>
+                    <input type="text" id="trans-desc" placeholder="Опис (необов'язково)">
+                    <button class="btn-primary" onclick="window.addTransaction()">💾 Зберегти</button>
+                </div>
+            </div>
+
+            <div class="filters">
+                <h3>🔍 Фільтрація</h3>
+                <select id="filter-category">
+                    <option value="all">Всі категорії</option>
+                    <option value="Їжа">🍔 Їжа</option>
+                    <option value="Транспорт">🚗 Транспорт</option>
+                    <option value="Навчання">📚 Навчання</option>
+                    <option value="Розваги">🎬 Розваги</option>
+                    <option value="Житло">🏠 Житло</option>
+                    <option value="Зв'язок">📱 Зв'язок</option>
+                    <option value="Інше">📌 Інше</option>
+                </select>
+            </div>
+
+            <div class="transactions-list" id="transactions-list">
+                <div class="empty-state">💡 Додайте першу транзакцію</div>
+            </div>
         </div>
     </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
