@@ -1,9 +1,10 @@
 
+
 export const firebaseConfig = {
-    apiKey: "ВАШ_API_KEY",
-    authDomain: "ВАШ_AUTH_DOMAIN",
-    projectId: "ВАШ_PROJECT_ID",
-    storageBucket: "ВАШ_STORAGE_BUCKET",
-    messagingSenderId: "ВАШ_SENDER_ID",
-    appId: "ВАШ_APP_ID"
+    apiKey : "AIzaSyA4nhImieNi7fDV8axuBHiq0ksbcfGjZzo" , 
+  authDomain : "kursova1-d43e4.firebaseapp.com" , 
+  идентификатор проекта : "kursova1-d43e4" , 
+  storageBucket : "kursova1-d43e4.firebasestorage.app" , 
+  messagingSenderId : "88516887260" , 
+  appId : "1:88516887260:web:045e402ba51e2ae48aaa19" 
 };
