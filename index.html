@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Фінанси студента</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -24,12 +20,8 @@
             padding: 30px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
-        .auth-screen, .app-screen {
-            display: none;
-        }
-        .auth-screen.active, .app-screen.active {
-            display: block;
-        }
+        .auth-screen, .app-screen { display: none; }
+        .auth-screen.active, .app-screen.active { display: block; }
         button {
             background: #4285f4;
             color: white;
@@ -56,12 +48,8 @@
             justify-content: space-between;
             align-items: center;
         }
-        .transaction-income {
-            border-left: 5px solid green;
-        }
-        .transaction-expense {
-            border-left: 5px solid red;
-        }
+        .transaction-income { border-left: 5px solid green; }
+        .transaction-expense { border-left: 5px solid red; }
         .income-text { color: green; font-weight: bold; }
         .expense-text { color: red; font-weight: bold; }
         .balance-card {
@@ -72,28 +60,22 @@
             margin-bottom: 20px;
             text-align: center;
         }
-        .balance-amount {
-            font-size: 48px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
+        .balance-amount { font-size: 48px; font-weight: bold; margin: 10px 0; }
+        .delete-btn { background: #dc2626; padding: 5px 10px; font-size: 12px; }
     </style>
     
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Екран входу -->
         <div id="auth-screen" class="auth-screen active">
             <h1>💰 Фінанси студента</h1>
             <p>Керуй своїми доходами та витратами</p>
             <button onclick="signIn()">🚀 Увійти через Google</button>
         </div>
 
-        <!-- Головний екран -->
         <div id="app-screen" class="app-screen">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -121,6 +103,9 @@
                 <option value="Транспорт">🚗 Транспорт</option>
                 <option value="Навчання">📚 Навчання</option>
                 <option value="Розваги">🎬 Розваги</option>
+                <option value="Житло">🏠 Житло</option>
+                <option value="Зв'язок">📱 Зв'язок</option>
+                <option value="Інше">📌 Інше</option>
             </select>
             <input type="text" id="trans-desc" placeholder="Опис">
             <button onclick="addTransaction()" style="background: #10b981;">💾 Зберегти</button>
@@ -131,7 +116,6 @@
     </div>
 
     <script>
-        // ========== КОНФІГУРАЦІЯ ==========
         const firebaseConfig = {
             apiKey: "AIzaSyDu4HEpjWVfJOE4GMji2ux-KK_47-YRvfw",
             authDomain: "kursova1-4e839.firebaseapp.com",
@@ -146,73 +130,54 @@
         const db = firebase.firestore();
         let currentUser = null;
 
-        // ========== ВХІД ==========
         window.signIn = () => {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider)
-                .then(result => {
-                    console.log("Вхід успішний:", result.user.email);
-                })
-                .catch(error => {
-                    console.error("Помилка входу:", error);
-                    alert("Помилка: " + error.message);
-                });
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+                .catch(e => alert("Помилка: " + e.message));
         };
 
-        // ========== ВИХІД ==========
         window.logout = () => {
-            auth.signOut().then(() => {
-                location.reload();
-            });
+            auth.signOut().then(() => location.reload());
         };
 
-        // ========== ДОДАВАННЯ ==========
         window.addTransaction = async () => {
-            if (!currentUser) {
-                alert("Увійдіть!");
-                return;
-            }
+            if (!currentUser) return alert("Увійдіть!");
             
             const amount = parseFloat(document.getElementById('trans-amount').value);
-            if (!amount || amount <= 0) {
-                alert("Введіть суму!");
-                return;
-            }
-            
-            const data = {
-                userId: currentUser.uid,
-                type: document.getElementById('trans-type').value,
-                amount: amount,
-                category: document.getElementById('trans-category').value,
-                description: document.getElementById('trans-desc').value || "",
-                date: new Date().toISOString()
-            };
+            if (!amount || amount <= 0) return alert("Введіть суму!");
             
             try {
-                await db.collection('transactions').add(data);
+                await db.collection('transactions').add({
+                    userId: currentUser.uid,
+                    type: document.getElementById('trans-type').value,
+                    amount: amount,
+                    category: document.getElementById('trans-category').value,
+                    description: document.getElementById('trans-desc').value || "",
+                    date: new Date().toISOString()
+                });
+                
                 document.getElementById('trans-amount').value = '';
                 document.getElementById('trans-desc').value = '';
                 await loadTransactions();
                 alert("✅ Збережено!");
-            } catch (error) {
-                console.error(error);
-                alert("Помилка: " + error.message);
+            } catch (e) {
+                alert("Помилка: " + e.message);
             }
         };
 
-        // ========== ЗАВАНТАЖЕННЯ ==========
         async function loadTransactions() {
             if (!currentUser) return;
             
+            // Прибираємо orderBy, щоб уникнути помилки індексу
             const snapshot = await db.collection('transactions')
                 .where('userId', '==', currentUser.uid)
-                .orderBy('date', 'desc')
                 .get();
             
             const transactions = [];
             snapshot.forEach(doc => transactions.push({ id: doc.id, ...doc.data() }));
             
-            // Відображення
+            // Сортуємо в пам'яті (замість orderBy в запиті)
+            transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
             const container = document.getElementById('transactions-list');
             if (transactions.length === 0) {
                 container.innerHTML = '<p>📭 Немає транзакцій</p>';
@@ -227,12 +192,11 @@
                         <div class="${t.type === 'income' ? 'income-text' : 'expense-text'}">
                             ${t.type === 'income' ? '+' : '-'} ${t.amount} ₴
                         </div>
-                        <button onclick="deleteTransaction('${t.id}')">🗑️</button>
+                        <button class="delete-btn" onclick="deleteTransaction('${t.id}')">🗑️</button>
                     </div>
                 `).join('');
             }
             
-            // Баланс
             let income = 0, expense = 0;
             transactions.forEach(t => {
                 if (t.type === 'income') income += t.amount;
@@ -243,7 +207,6 @@
             document.getElementById('total-expense').innerHTML = expense;
         }
 
-        // ========== ВИДАЛЕННЯ ==========
         window.deleteTransaction = async (id) => {
             if (confirm("Видалити?")) {
                 await db.collection('transactions').doc(id).delete();
@@ -251,18 +214,15 @@
             }
         };
 
-        // ========== СТЕЖЕННЯ ЗА КОРИСТУВАЧЕМ ==========
         auth.onAuthStateChanged(user => {
             currentUser = user;
             if (user) {
-                console.log("Увійшов:", user.email, user.uid);
                 document.getElementById('user-name').innerText = user.displayName;
                 document.getElementById('user-avatar').src = user.photoURL || '';
                 document.getElementById('auth-screen').classList.remove('active');
                 document.getElementById('app-screen').classList.add('active');
                 loadTransactions();
             } else {
-                console.log("Не увійшов");
                 document.getElementById('auth-screen').classList.add('active');
                 document.getElementById('app-screen').classList.remove('active');
             }
