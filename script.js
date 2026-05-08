@@ -8,40 +8,41 @@ const firebaseConfig = {
     appId: "1:580567528040:web:81c77c2a05bf9c183841dd"
 };
 
-// Ініціалізація
+// Ініціалізація Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-const provider = new firebase.auth.GoogleAuthProvider();
 
+// ========== ЗМІННІ ==========
 let currentUser = null;
 
-// ========== ВХІД (через редирект, а не popup) ==========
+// ========== ФУНКЦІЯ ВХОДУ ==========
 window.signIn = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithRedirect(provider);
 };
 
-// ========== ВИХІД ==========
+// ========== ФУНКЦІЯ ВИХОДУ ==========
 window.logout = () => {
     auth.signOut().then(() => {
         window.location.reload();
     });
 };
 
-// ========== ДОДАВАННЯ ТРАНЗАКЦІЇ ==========
+// ========== ФУНКЦІЯ ДОДАВАННЯ ТРАНЗАКЦІЇ ==========
 window.addTransaction = async () => {
     if (!currentUser) {
-        alert("Увійдіть спочатку!");
+        alert("Спочатку увійдіть в систему!");
         return;
     }
     
-    const type = document.getElementById('trans-type').value;
     const amount = parseFloat(document.getElementById('trans-amount').value);
+    const type = document.getElementById('trans-type').value;
     const category = document.getElementById('trans-category').value;
     const description = document.getElementById('trans-desc').value;
     
     if (!amount || isNaN(amount) || amount <= 0) {
-        alert("Введіть коректну суму!");
+        alert("Введіть коректну суму (більше 0)");
         return;
     }
     
@@ -52,15 +53,19 @@ window.addTransaction = async () => {
             amount: amount,
             category: category,
             description: description || "",
-            date: firebase.firestore.Timestamp.now()
+            date: new Date().toISOString()
         });
         
-        document.getElementById('trans-amount').value = '';
-        document.getElementById('trans-desc').value = '';
+        // Очищаємо поля
+        document.getElementById('trans-amount').value = "";
+        document.getElementById('trans-desc').value = "";
+        
+        // Оновлюємо список
         await loadTransactions();
         
+        console.log("✅ Транзакцію додано!");
     } catch (error) {
-        console.error("Помилка:", error);
+        console.error("❌ Помилка додавання:", error);
         alert("Помилка: " + error.message);
     }
 };
@@ -68,7 +73,7 @@ window.addTransaction = async () => {
 // ========== ЗАВАНТАЖЕННЯ ТРАНЗАКЦІЙ ==========
 async function loadTransactions() {
     if (!currentUser) {
-        console.log("Немає користувача");
+        console.log("Користувач не увійшов");
         return;
     }
     
@@ -86,14 +91,18 @@ async function loadTransactions() {
                 amount: data.amount,
                 type: data.type,
                 category: data.category,
-                description: data.description,
-                date: data.date?.toDate() || new Date()
+                description: data.description || "",
+                date: data.date
             });
         });
         
+        // Відображаємо список транзакцій
         displayTransactions(transactions);
+        
+        // Оновлюємо баланс
         updateBalance(transactions);
         
+        console.log(`Завантажено ${transactions.length} транзакцій`);
     } catch (error) {
         console.error("Помилка завантаження:", error);
     }
@@ -104,30 +113,32 @@ function displayTransactions(transactions) {
     const container = document.getElementById('transactions-list');
     
     if (!transactions || transactions.length === 0) {
-        container.innerHTML = '<div class="empty-state">📭 Немає транзакцій</div>';
+        container.innerHTML = '<div class="empty-state">📭 Немає транзакцій. Додайте першу!</div>';
         return;
     }
     
     let html = '';
-    for (const t of transactions) {
-        const dateStr = t.date ? t.date.toLocaleDateString('uk-UA') : '';
+    for (let i = 0; i < transactions.length; i++) {
+        const t = transactions[i];
         const sign = t.type === 'income' ? '+' : '-';
         const amountClass = t.type === 'income' ? 'income-text' : 'expense-text';
+        const dateStr = t.date ? new Date(t.date).toLocaleDateString('uk-UA') : '';
         
         html += `
             <div class="transaction-item transaction-${t.type}">
-                <div>
+                <div style="flex: 2;">
                     <strong>${t.category}</strong>
                     <div class="transaction-category">${t.description || 'Без опису'}</div>
                     <div style="font-size: 12px; color: #999;">${dateStr}</div>
                 </div>
-                <div class="transaction-amount ${amountClass}">
+                <div class="transaction-amount ${amountClass}" style="flex: 1; text-align: right;">
                     ${sign} ${t.amount.toFixed(2)} ₴
                 </div>
-                <button class="delete-btn" onclick="deleteTransaction('${t.id}')">🗑️</button>
+                <button class="delete-btn" onclick="deleteTransaction('${t.id}')" style="margin-left: 10px;">🗑️</button>
             </div>
         `;
     }
+    
     container.innerHTML = html;
 }
 
@@ -136,7 +147,8 @@ function updateBalance(transactions) {
     let totalIncome = 0;
     let totalExpense = 0;
     
-    for (const t of transactions) {
+    for (let i = 0; i < transactions.length; i++) {
+        const t = transactions[i];
         if (t.type === 'income') {
             totalIncome += t.amount;
         } else {
@@ -160,10 +172,11 @@ function updateBalance(transactions) {
 
 // ========== ВИДАЛЕННЯ ТРАНЗАКЦІЇ ==========
 window.deleteTransaction = async (id) => {
-    if (!confirm('Видалити транзакцію?')) return;
+    if (!confirm('Видалити цю транзакцію?')) return;
     
     try {
         await db.collection('transactions').doc(id).delete();
+        console.log("Транзакцію видалено");
         await loadTransactions();
     } catch (error) {
         console.error("Помилка видалення:", error);
@@ -173,34 +186,86 @@ window.deleteTransaction = async (id) => {
 
 // ========== ФІЛЬТРАЦІЯ ==========
 document.getElementById('filter-category').addEventListener('change', () => {
-    loadTransactions();
+    // Фільтрація в реальному часі
+    const filterValue = document.getElementById('filter-category').value;
+    if (filterValue === 'all') {
+        loadTransactions();
+    } else {
+        filterTransactions(filterValue);
+    }
 });
 
-// ========== СТЕЖЕННЯ ЗА КОРИСТУВАЧЕМ (з редиректом) ==========
+async function filterTransactions(category) {
+    if (!currentUser) return;
+    
+    try {
+        const snapshot = await db.collection('transactions')
+            .where('userId', '==', currentUser.uid)
+            .where('category', '==', category)
+            .orderBy('date', 'desc')
+            .get();
+        
+        const transactions = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            transactions.push({
+                id: doc.id,
+                amount: data.amount,
+                type: data.type,
+                category: data.category,
+                description: data.description || "",
+                date: data.date
+            });
+        });
+        
+        displayTransactions(transactions);
+        // Баланс не перераховуємо при фільтрації, щоб показувати загальний
+    } catch (error) {
+        console.error("Помилка фільтрації:", error);
+    }
+}
+
+// ========== СТЕЖЕННЯ ЗА СТАТУСОМ АВТЕНТИФІКАЦІЇ ==========
+auth.onAuthStateChanged((user) => {
+    currentUser = user;
+    
+    if (user) {
+        console.log("✅ Користувач увійшов:", user.email);
+        console.log("UID:", user.uid);
+        
+        // Оновлюємо інформацію про користувача
+        document.getElementById('user-name').innerText = user.displayName;
+        document.getElementById('user-avatar').src = user.photoURL || 'https://via.placeholder.com/50';
+        
+        // Показуємо головний екран
+        document.getElementById('auth-screen').classList.remove('active');
+        document.getElementById('app-screen').classList.add('active');
+        
+        // Завантажуємо транзакції
+        loadTransactions();
+        
+    } else {
+        console.log("❌ Користувач вийшов");
+        
+        // Показуємо екран входу
+        document.getElementById('auth-screen').classList.add('active');
+        document.getElementById('app-screen').classList.remove('active');
+        
+        // Очищаємо список
+        document.getElementById('transactions-list').innerHTML = '<div class="empty-state">💡 Увійдіть, щоб побачити транзакції</div>';
+        document.getElementById('balance').innerHTML = '0.00 ₴';
+        document.getElementById('total-income').innerHTML = '0';
+        document.getElementById('total-expense').innerHTML = '0';
+    }
+});
+
+// Обробка редиректу після входу
 auth.getRedirectResult().then((result) => {
     if (result.user) {
-        console.log("Користувач увійшов через редирект:", result.user.email);
+        console.log("Вхід через редирект успішний:", result.user.email);
     }
 }).catch((error) => {
     console.error("Помилка редиректу:", error);
 });
 
-auth.onAuthStateChanged((user) => {
-    currentUser = user;
-    
-    if (user) {
-        console.log("✅ Увійшов:", user.email);
-        document.getElementById('user-name').innerText = user.displayName;
-        document.getElementById('user-avatar').src = user.photoURL || 'https://via.placeholder.com/50';
-        document.getElementById('auth-screen').classList.remove('active');
-        document.getElementById('app-screen').classList.add('active');
-        loadTransactions();
-    } else {
-        console.log("❌ Не увійшов");
-        document.getElementById('auth-screen').classList.add('active');
-        document.getElementById('app-screen').classList.remove('active');
-        document.getElementById('transactions-list').innerHTML = '<div class="empty-state">💡 Увійдіть, щоб побачити транзакції</div>';
-    }
-});
-
-console.log("✅ Скрипт завантажено!!!");
+console.log("✅ Скрипт повністю завантажено та готовий до роботи!");
